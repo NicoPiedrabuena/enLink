@@ -18,7 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Only the configured TLS proxy may supply forwarded headers used for
         // secure cookies, URLs, rate limits and HSTS.
-        $middleware->trustProxies(at: config('enlink.trusted_proxies'));
+        // Configuration bindings are not available yet while Laravel builds
+        // the middleware stack, so this must be read directly from the env.
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', '')),
+        )));
+        $middleware->trustProxies(at: $trustedProxies);
         $middleware->trustHosts();
 
         $middleware->alias([
