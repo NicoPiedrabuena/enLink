@@ -17,7 +17,7 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 FROM base AS development-dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-FROM node:22-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
