@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Payments\ProcessMercadoPagoWebhookAction;
 use App\Actions\Payments\PaymentProcessingUnavailableException;
+use App\Actions\Payments\ProcessMercadoPagoWebhookAction;
 use App\Support\MercadoPagoWebhookSignature;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
