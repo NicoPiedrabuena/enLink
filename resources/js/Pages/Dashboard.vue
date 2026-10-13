@@ -5,20 +5,20 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 type EditorTab = 'links' | 'appearance' | 'profile';
 type ButtonStyle = 'solid' | 'outline' | 'shadow' | 'transparent';
-type Theme = { background: string; primary: string; text: string; radius: 'rounded' | 'soft' | 'square'; button_style: ButtonStyle };
+type Theme = { background: string; primary: string; text: string; button_text?: string; background_image?: string | null; radius: 'rounded' | 'soft' | 'square'; button_style: ButtonStyle };
 type LinkIcon = 'link' | 'google' | 'linkedin' | 'maps' | 'instagram' | 'facebook' | 'whatsapp' | 'youtube' | 'tiktok' | 'spotify' | 'email' | 'calendar';
 type LinkItem = { id: number; title: string; icon: LinkIcon; url: string; type: 'link' | 'reservation'; settings: { whatsapp_number?: string } | null; whatsapp_number?: string; position: number; is_active: boolean };
 type Publication = { version: number; username: string; published_at: string };
-type LinkPage = { username: string; display_name: string; bio: string | null; avatar_url: string | null; theme: Theme; links: LinkItem[]; active_publication: Publication | null };
+type LinkPage = { username: string; display_name: string; bio: string | null; avatar_url: string | null; background_image_url: string | null; theme: Theme; links: LinkItem[]; active_publication: Publication | null };
 
 const props = defineProps<{ page: LinkPage; credits: { balance: number }; publicUrl: string | null }>();
 const themes: Array<{ name: string; theme: Theme }> = [
-    { name: 'Noche', theme: { background: '#0f172a', primary: '#8b5cf6', text: '#f8fafc', radius: 'rounded', button_style: 'solid' } },
-    { name: 'Enlink', theme: { background: '#f6f4ee', primary: '#6e35ff', text: '#171713', radius: 'rounded', button_style: 'shadow' } },
-    { name: 'Minimal', theme: { background: '#ffffff', primary: '#171713', text: '#171713', radius: 'square', button_style: 'transparent' } },
-    { name: 'Bosque', theme: { background: '#ecfdf5', primary: '#047857', text: '#064e3b', radius: 'soft', button_style: 'outline' } },
-    { name: 'Atardecer', theme: { background: '#fff1e8', primary: '#ea580c', text: '#431407', radius: 'rounded', button_style: 'solid' } },
-    { name: 'Lila pop', theme: { background: '#faf5ff', primary: '#7e22ce', text: '#3b0764', radius: 'soft', button_style: 'shadow' } },
+    { name: 'Noche', theme: { background: '#0f172a', primary: '#8b5cf6', text: '#f8fafc', button_text: '#ffffff', radius: 'rounded', button_style: 'solid' } },
+    { name: 'Enlink', theme: { background: '#f6f4ee', primary: '#6e35ff', text: '#171713', button_text: '#ffffff', radius: 'rounded', button_style: 'shadow' } },
+    { name: 'Minimal', theme: { background: '#ffffff', primary: '#171713', text: '#171713', button_text: '#171713', radius: 'square', button_style: 'transparent' } },
+    { name: 'Bosque', theme: { background: '#ecfdf5', primary: '#047857', text: '#064e3b', button_text: '#064e3b', radius: 'soft', button_style: 'outline' } },
+    { name: 'Atardecer', theme: { background: '#fff1e8', primary: '#ea580c', text: '#431407', button_text: '#ffffff', radius: 'rounded', button_style: 'solid' } },
+    { name: 'Lila pop', theme: { background: '#faf5ff', primary: '#7e22ce', text: '#3b0764', button_text: '#ffffff', radius: 'soft', button_style: 'shadow' } },
 ];
 const iconOptions: Array<{ value: LinkIcon; label: string; glyph: string }> = [
     { value: 'link', label: 'Enlace', glyph: '↗' },
@@ -35,6 +35,19 @@ const iconOptions: Array<{ value: LinkIcon; label: string; glyph: string }> = [
     { value: 'calendar', label: 'Calendario', glyph: '31' },
 ];
 const iconGlyph = (icon: LinkIcon) => iconOptions.find((item) => item.value === icon)?.glyph ?? '↗';
+const buttonTextColor = (background: string) => {
+    const hex = background.replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return '#171713';
+
+    const channels = [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16) / 255);
+    const luminance = channels
+        .map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+        .reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const contrastWithWhite = 1.05 / (luminance + 0.05);
+    const contrastWithDark = (luminance + 0.05) / 0.059;
+
+    return contrastWithWhite >= contrastWithDark ? '#ffffff' : '#171713';
+};
 const detectIcon = (url: string, type: LinkItem['type'] = 'link'): LinkIcon => {
     if (type === 'reservation') return 'calendar';
     const value = url.trim().toLowerCase();
@@ -53,11 +66,13 @@ const detectIcon = (url: string, type: LinkItem['type'] = 'link'): LinkIcon => {
     return 'link';
 };
 const editorTab = ref<EditorTab>('links');
-const form = useForm({ username: props.page.username, display_name: props.page.display_name, bio: props.page.bio ?? '', theme: { ...props.page.theme, button_style: props.page.theme.button_style ?? 'solid' as ButtonStyle } });
+const form = useForm({ username: props.page.username, display_name: props.page.display_name, bio: props.page.bio ?? '', theme: { ...props.page.theme, button_style: props.page.theme.button_style ?? 'solid' as ButtonStyle, button_text: props.page.theme.button_text ?? buttonTextColor(props.page.theme.primary) } });
 const newLink = useForm({ title: '', icon: 'link' as LinkIcon, url: '', type: 'link' as 'link' | 'reservation', whatsapp_number: '' });
 const avatarForm = useForm<{ avatar: File | null }>({ avatar: null });
+const backgroundImageForm = useForm<{ background_image: File | null }>({ background_image: null });
 const links = ref<LinkItem[]>([]);
 const avatarUrl = ref<string | null>(props.page.avatar_url);
+const backgroundImageUrl = ref<string | null>(props.page.background_image_url);
 const publishProcessing = ref(false);
 const publishError = ref<string | null>(null);
 const draggedLinkId = ref<number | null>(null);
@@ -65,13 +80,14 @@ const orderChanged = ref(false);
 
 watch(() => props.page.links, (value) => { links.value = value.map((link) => ({ ...link, type: link.type ?? 'link', whatsapp_number: link.settings?.whatsapp_number ?? '' })).sort((a, b) => a.position - b.position); }, { immediate: true });
 watch(() => props.page.avatar_url, (value) => { avatarUrl.value = value; });
+watch(() => props.page.background_image_url, (value) => { backgroundImageUrl.value = value; });
 
 const activeLinks = computed(() => links.value.filter((link) => link.is_active));
 const hasPublishedVersion = computed(() => props.page.active_publication !== null);
 const isOnboarding = computed(() => !hasPublishedVersion.value && links.value.length === 0);
 const publishLabel = computed(() => props.credits.balance > 0 ? 'Publicar por 1 crédito' : 'Publicar · Pack $5.000');
 const saveProfile = () => form.put('/dashboard/page', { preserveScroll: true });
-const useTheme = (theme: Theme) => { form.theme = { ...theme }; };
+const useTheme = (theme: Theme) => { form.theme = { ...theme, button_text: theme.button_text ?? buttonTextColor(theme.primary), background_image: form.theme.background_image }; };
 const addLink = () => newLink.post('/dashboard/links', { preserveScroll: true, onSuccess: () => newLink.reset() });
 const updateLink = (link: LinkItem) => {
     const editedField = document.activeElement as HTMLInputElement | null;
@@ -118,18 +134,32 @@ const startDragging = (link: LinkItem, event: PointerEvent) => {
 
 onBeforeUnmount(finishDragging);
 const previewButtonStyle = computed(() => {
-    const base = { color: form.theme.button_style === 'solid' ? '#ffffff' : form.theme.primary };
+    const base = { color: form.theme.button_text ?? buttonTextColor(form.theme.primary) };
     if (form.theme.button_style === 'outline') return { ...base, background: 'transparent', border: `2px solid ${form.theme.primary}` };
     if (form.theme.button_style === 'shadow') return { ...base, background: form.theme.primary, border: `2px solid ${form.theme.text}`, boxShadow: `4px 4px 0 ${form.theme.text}` };
     if (form.theme.button_style === 'transparent') return { ...base, background: 'transparent', border: '1px solid transparent', textDecoration: 'underline', textUnderlineOffset: '5px' };
     return { ...base, background: form.theme.primary, border: '2px solid transparent' };
 });
+const previewPageStyle = computed(() => ({
+    backgroundColor: form.theme.background,
+    color: form.theme.text,
+    backgroundImage: backgroundImageUrl.value ? `linear-gradient(rgb(0 0 0 / 8%), rgb(0 0 0 / 8%)), url("${backgroundImageUrl.value}")` : 'none',
+    backgroundPosition: 'center',
+    backgroundSize: 'cover',
+}));
 const uploadAvatar = (event: Event) => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     avatarForm.avatar = file;
     avatarForm.post('/dashboard/avatar', { forceFormData: true, preserveScroll: true, onSuccess: () => { avatarUrl.value = URL.createObjectURL(file); input.value = ''; } });
+};
+const uploadBackgroundImage = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    backgroundImageForm.background_image = file;
+    backgroundImageForm.post('/dashboard/background-image', { forceFormData: true, preserveScroll: true, onSuccess: () => { backgroundImageUrl.value = URL.createObjectURL(file); input.value = ''; } });
 };
 const publish = () => router.post('/dashboard/publish', {}, {
     preserveScroll: true,
@@ -189,12 +219,49 @@ const publish = () => router.post('/dashboard/publish', {}, {
                         </section>
                     </section>
 
-                    <section v-else-if="editorTab === 'appearance'" class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6"><div><h3 class="text-lg font-bold text-slate-950">Apariencia</h3><p class="mt-1 text-sm text-slate-500">Elegí un estilo predeterminado y después personalizalo.</p></div><div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><button v-for="preset in themes" :key="preset.name" class="rounded-2xl border-2 p-3 text-left transition hover:-translate-y-1" :style="{ background: preset.theme.background, color: preset.theme.text, borderColor: preset.theme.text }" @click="useTheme(preset.theme)"><span class="block h-9 px-3 py-2 text-center text-xs font-black" :class="{ 'rounded-full': preset.theme.radius === 'rounded', 'rounded-lg': preset.theme.radius === 'soft' }" :style="{ background: preset.theme.button_style === 'solid' || preset.theme.button_style === 'shadow' ? preset.theme.primary : 'transparent', color: preset.theme.button_style === 'solid' ? '#fff' : preset.theme.primary, border: `2px solid ${preset.theme.primary}`, boxShadow: preset.theme.button_style === 'shadow' ? `3px 3px 0 ${preset.theme.text}` : 'none' }">Mi enlace</span><span class="mt-3 block text-sm font-black">{{ preset.name }}</span></button></div><div class="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2"><label class="grid gap-1 text-sm font-semibold text-slate-700">Fondo<input v-model="form.theme.background" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label><label class="grid gap-1 text-sm font-semibold text-slate-700">Color del botón<input v-model="form.theme.primary" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label><label class="grid gap-1 text-sm font-semibold text-slate-700">Texto<input v-model="form.theme.text" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label><label class="grid gap-1 text-sm font-semibold text-slate-700">Forma<select v-model="form.theme.radius" class="rounded-xl border-slate-300"><option value="rounded">Redondeados</option><option value="soft">Suaves</option><option value="square">Rectos</option></select></label><label class="grid gap-1 text-sm font-semibold text-slate-700 sm:col-span-2">Estilo del botón<select v-model="form.theme.button_style" class="rounded-xl border-slate-300"><option value="solid">Color pleno</option><option value="outline">Transparente con borde</option><option value="shadow">Remarcado estilo Enlink</option><option value="transparent">Solo texto transparente</option></select></label></div><button class="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50" :disabled="form.processing" @click="saveProfile">Guardar apariencia</button></section>
+                    <section v-else-if="editorTab === 'appearance'" class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+                        <div><h3 class="text-lg font-bold text-slate-950">Apariencia</h3><p class="mt-1 text-sm text-slate-500">Elegí un estilo predeterminado y después personalizalo.</p></div>
+                        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <button v-for="preset in themes" :key="preset.name" class="rounded-2xl border-2 p-3 text-left transition hover:-translate-y-1" :style="{ background: preset.theme.background, color: preset.theme.text, borderColor: preset.theme.text }" @click="useTheme(preset.theme)">
+                                <span class="block h-9 px-3 py-2 text-center text-xs font-black" :class="{ 'rounded-full': preset.theme.radius === 'rounded', 'rounded-lg': preset.theme.radius === 'soft' }" :style="{ background: preset.theme.button_style === 'solid' || preset.theme.button_style === 'shadow' ? preset.theme.primary : 'transparent', color: preset.theme.button_text, border: `2px solid ${preset.theme.primary}`, boxShadow: preset.theme.button_style === 'shadow' ? `3px 3px 0 ${preset.theme.text}` : 'none' }">Mi enlace</span>
+                                <span class="mt-3 block text-sm font-black">{{ preset.name }}</span>
+                            </button>
+                        </div>
+                        <div class="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2">
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Fondo<input v-model="form.theme.background" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label>
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Color del botón<input v-model="form.theme.primary" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label>
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Texto de la página<input v-model="form.theme.text" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label>
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Texto del botón<input v-model="form.theme.button_text" type="color" class="h-10 w-full rounded-lg border-0 bg-transparent" /></label>
+                            <div class="grid gap-1 text-sm font-semibold text-slate-700 sm:col-span-2"><span>Imagen de fondo</span><span class="text-xs font-normal text-slate-500">JPG, PNG o WEBP · hasta 5 MB</span><div class="flex flex-wrap items-center gap-3"><span v-if="backgroundImageUrl" class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">Imagen cargada</span><label class="cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100">Subir imagen<input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" @change="uploadBackgroundImage" /></label></div><p v-if="backgroundImageForm.errors.background_image" class="text-xs font-medium text-rose-600">{{ backgroundImageForm.errors.background_image }}</p></div>
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Forma<select v-model="form.theme.radius" class="rounded-xl border-slate-300"><option value="rounded">Redondeados</option><option value="soft">Suaves</option><option value="square">Rectos</option></select></label>
+                            <label class="grid gap-1 text-sm font-semibold text-slate-700">Estilo del botón<select v-model="form.theme.button_style" class="rounded-xl border-slate-300"><option value="solid">Color pleno</option><option value="outline">Transparente con borde</option><option value="shadow">Remarcado estilo Enlink</option><option value="transparent">Solo texto transparente</option></select></label>
+                        </div>
+                        <button class="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50" :disabled="form.processing" @click="saveProfile">Guardar apariencia</button>
+                    </section>
 
                     <section v-else class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6"><div class="flex flex-wrap items-center justify-between gap-4"><div><h3 class="text-lg font-bold text-slate-950">Tu perfil</h3><p class="mt-1 text-sm text-slate-500">La información que encabeza tu página.</p></div><label class="cursor-pointer rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200">Cambiar foto<input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" @change="uploadAvatar" /></label></div><div class="mt-6 grid gap-5 sm:grid-cols-[104px_1fr]"><div class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-2xl font-bold text-slate-500"><img v-if="avatarUrl" :src="avatarUrl" alt="Vista previa del avatar" class="h-full w-full object-cover" /><span v-else>{{ form.display_name.slice(0, 1).toUpperCase() }}</span></div><div class="grid gap-4"><label class="grid gap-1 text-sm font-semibold text-slate-700">Nombre público<input v-model="form.display_name" class="rounded-xl border-slate-300" maxlength="80" placeholder="Tu nombre" /></label><label class="grid gap-1 text-sm font-semibold text-slate-700">Usuario<input v-model="form.username" class="rounded-xl border-slate-300" maxlength="30" pattern="[a-zA-Z-]+" placeholder="tu-enlink" /><span class="text-xs font-normal text-slate-500">Solo letras y guiones; se guarda en minúsculas.</span></label><label class="grid gap-1 text-sm font-semibold text-slate-700">Bio<textarea v-model="form.bio" class="rounded-xl border-slate-300" maxlength="180" rows="4" placeholder="Contá quién sos" /></label></div></div><p v-if="form.errors.username" class="mt-3 text-sm text-rose-600">{{ form.errors.username }}</p><p v-if="avatarForm.errors.avatar" class="mt-3 text-sm text-rose-600">{{ avatarForm.errors.avatar }}</p><button class="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50" :disabled="form.processing" @click="saveProfile">Guardar perfil</button></section>
                 </section>
 
-                <aside class="lg:sticky lg:top-6 lg:h-fit"><div class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div class="mb-4 flex items-center justify-between"><div><p class="text-sm font-bold text-slate-950">Vista previa</p><p class="text-xs text-slate-500">Así se verá en móvil</p></div><span class="h-2.5 w-2.5 rounded-full bg-emerald-500" title="Vista previa activa" /></div><div class="mx-auto max-w-[310px] rounded-[2.7rem] border-[9px] border-slate-950 p-5 shadow-2xl" :style="{ background: form.theme.background, color: form.theme.text }"><div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-300 text-xl font-bold text-slate-500"><img v-if="avatarUrl" :src="avatarUrl" alt="" class="h-full w-full object-cover" /><span v-else>{{ form.display_name.slice(0, 1).toUpperCase() }}</span></div><h3 class="text-center text-lg font-bold">{{ form.display_name || 'Tu nombre' }}</h3><p class="mb-6 mt-1 text-center text-sm opacity-75">{{ form.bio || 'Tu bio aparecerá acá' }}</p><span v-for="link in activeLinks" :key="link.id" class="mb-3 flex items-center justify-center gap-2 px-4 py-3 text-center text-sm font-bold" :class="{ 'rounded-2xl': form.theme.radius === 'rounded', 'rounded-xl': form.theme.radius === 'soft' }" :style="previewButtonStyle"><span class="grid h-6 min-w-6 place-items-center rounded-md border border-current/25 px-1 text-[11px] font-black">{{ iconGlyph(link.icon) }}</span>{{ link.title }}</span><p v-if="!activeLinks.length" class="rounded-xl border border-dashed border-current/30 p-4 text-center text-xs opacity-60">Tus enlaces activos aparecerán acá.</p></div><a v-if="props.publicUrl" :href="props.publicUrl" target="_blank" rel="noopener noreferrer" class="mt-5 block rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white">Abrir página publicada ↗</a><p v-else class="mt-5 text-center text-xs text-slate-400">Publicá para activar tu URL pública.</p></div></aside>
+                <aside class="lg:sticky lg:top-6 lg:h-fit">
+                    <div class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                        <div class="mb-4 flex items-center justify-between">
+                            <div><p class="text-sm font-bold text-slate-950">Vista previa</p><p class="text-xs text-slate-500">Así se verá tu página en un celular</p></div>
+                            <span class="h-2.5 w-2.5 rounded-full" :class="hasPublishedVersion ? 'bg-emerald-500' : 'bg-amber-400'" :title="hasPublishedVersion ? 'Página publicada' : 'Borrador sin publicar'" />
+                        </div>
+                        <div class="mx-auto max-w-[310px] rounded-[2.7rem] border-[9px] border-slate-950 p-5 shadow-2xl" :style="previewPageStyle">
+                            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-300 text-xl font-bold text-slate-500"><img v-if="avatarUrl" :src="avatarUrl" alt="" class="h-full w-full object-cover" /><span v-else>{{ form.display_name.slice(0, 1).toUpperCase() }}</span></div>
+                            <h3 class="text-center text-lg font-bold">{{ form.display_name || 'Tu nombre' }}</h3>
+                            <p class="mb-6 mt-1 text-center text-sm opacity-75">{{ form.bio || 'Tu bio aparecerá acá' }}</p>
+                            <span v-for="link in activeLinks" :key="link.id" class="mb-3 flex items-center justify-center gap-2 px-4 py-3 text-center text-sm font-bold" :class="{ 'rounded-2xl': form.theme.radius === 'rounded', 'rounded-xl': form.theme.radius === 'soft' }" :style="previewButtonStyle"><span class="grid h-6 min-w-6 place-items-center rounded-md border border-current/25 px-1 text-[11px] font-black">{{ iconGlyph(link.icon) }}</span>{{ link.title }}</span>
+                            <p v-if="!activeLinks.length" class="rounded-xl border border-dashed border-current/30 p-4 text-center text-xs opacity-60">Tus enlaces activos aparecerán acá.</p>
+                        </div>
+                        <a v-if="props.publicUrl" :href="props.publicUrl" target="_blank" rel="noopener noreferrer" class="mt-5 block rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white">Abrir página publicada ↗</a>
+                        <div v-else class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left">
+                            <p class="text-sm font-bold text-slate-900">Tu página todavía es un borrador</p>
+                            <p class="mt-1 text-xs leading-relaxed text-slate-600">Guardá los cambios y publicala cuando esté lista para compartir.</p>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </main>
     </AuthenticatedLayout>
@@ -205,10 +272,6 @@ const publish = () => router.post('/dashboard/publish', {}, {
 .panel-studio :deep(aside > div.rounded-3xl) {
     border: 2px solid #171713;
     box-shadow: 6px 6px 0 #171713;
-}
-
-.panel-studio :deep(aside > div.rounded-3xl) {
-    background: #b6a7ff;
 }
 
 .panel-studio :deep(form.bg-slate-50),

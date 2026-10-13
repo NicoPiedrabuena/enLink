@@ -11,7 +11,7 @@ class LinkPage extends Model
 {
     protected $fillable = ['username', 'display_name', 'bio', 'avatar_path', 'theme', 'active_publication_id', 'status', 'suspension_reason'];
 
-    protected $appends = ['avatar_url'];
+    protected $appends = ['avatar_url', 'background_image_url'];
 
     protected function casts(): array
     {
@@ -26,6 +26,13 @@ class LinkPage extends Model
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->avatar_path ? Storage::disk('public')->url($this->avatar_path) : null;
+    }
+
+    public function getBackgroundImageUrlAttribute(): ?string
+    {
+        $path = $this->theme['background_image'] ?? null;
+
+        return $path ? Storage::disk('public')->url($path) : null;
     }
 
     public function links(): HasMany

@@ -29,7 +29,7 @@ class DashboardController extends Controller
         $page = $request->user()->linkPage()->firstOrCreate([], [
             'username' => $this->suggestedUsername(),
             'display_name' => $request->user()->name,
-            'theme' => ['background' => '#f8fafc', 'primary' => '#111827', 'text' => '#111827', 'radius' => 'rounded', 'button_style' => 'solid'],
+            'theme' => ['background' => '#f8fafc', 'primary' => '#111827', 'text' => '#111827', 'button_text' => '#ffffff', 'radius' => 'rounded', 'button_style' => 'solid'],
         ]);
 
         $balance = $request->user()->creditBalance()->firstOrCreate([], ['balance' => 0]);
@@ -58,8 +58,10 @@ class DashboardController extends Controller
             'username' => strtolower(trim((string) $request->input('username'))),
         ]);
 
-        $data = $request->validate(['username' => ['required', 'regex:/^[a-z]+(?:-[a-z]+)*$/', 'min:3', 'max:30', Rule::unique('link_pages', 'username')->ignore($page), Rule::notIn(self::RESERVED)], 'display_name' => ['required', 'string', 'max:80'], 'bio' => ['nullable', 'string', 'max:180'], 'theme' => ['required', 'array'], 'theme.background' => ['required', 'string', 'max:20'], 'theme.primary' => ['required', 'string', 'max:20'], 'theme.text' => ['required', 'string', 'max:20'], 'theme.radius' => ['required', Rule::in(['rounded', 'soft', 'square'])], 'theme.button_style' => ['sometimes', Rule::in(['solid', 'outline', 'shadow', 'transparent'])]]);
+        $data = $request->validate(['username' => ['required', 'regex:/^[a-z]+(?:-[a-z]+)*$/', 'min:3', 'max:30', Rule::unique('link_pages', 'username')->ignore($page), Rule::notIn(self::RESERVED)], 'display_name' => ['required', 'string', 'max:80'], 'bio' => ['nullable', 'string', 'max:180'], 'theme' => ['required', 'array'], 'theme.background' => ['required', 'string', 'max:20'], 'theme.primary' => ['required', 'string', 'max:20'], 'theme.text' => ['required', 'string', 'max:20'], 'theme.button_text' => ['sometimes', 'regex:/^#[0-9a-fA-F]{6}$/'], 'theme.radius' => ['required', Rule::in(['rounded', 'soft', 'square'])], 'theme.button_style' => ['sometimes', Rule::in(['solid', 'outline', 'shadow', 'transparent'])]]);
         $data['theme']['button_style'] ??= $page->theme['button_style'] ?? 'solid';
+        $data['theme']['button_text'] ??= $page->theme['button_text'] ?? '#ffffff';
+        $data['theme']['background_image'] = $page->theme['background_image'] ?? null;
         $data['username'] = strtolower($data['username']);
         $page->update($data);
 
@@ -164,6 +166,33 @@ class DashboardController extends Controller
         $page->update(['avatar_path' => $path]);
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Foto de perfil actualizada.']);
+    }
+
+    public function updateBackgroundImage(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'background_image' => [
+                'required',
+                'file',
+                'image',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'max:5120',
+                'dimensions:min_width=320,min_height=320,max_width=6000,max_height=6000',
+            ],
+        ]);
+
+        $page = $request->user()->linkPage;
+        $theme = $page->theme;
+        $path = $data['background_image']->store("backgrounds/{$page->id}", 'public');
+
+        if (! empty($theme['background_image'])) {
+            Storage::disk('public')->delete($theme['background_image']);
+        }
+
+        $theme['background_image'] = $path;
+        $page->update(['theme' => $theme]);
+
+        return back()->with('toast', ['type' => 'success', 'message' => 'Imagen de fondo actualizada.']);
     }
 
     public function publish(Request $request, PublishPageAction $publishPage, CreateMercadoPagoCheckoutAction $createCheckout): SymfonyResponse

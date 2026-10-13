@@ -55,6 +55,21 @@ class DashboardEditorTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_owner_can_upload_a_background_image_to_public_storage(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $page = $this->pageFor($user);
+
+        $this->actingAs($user)
+            ->post('/dashboard/background-image', ['background_image' => UploadedFile::fake()->image('fondo.png', 1200, 900)])
+            ->assertRedirect();
+
+        $path = $page->refresh()->theme['background_image'];
+        $this->assertNotNull($path);
+        Storage::disk('public')->assertExists($path);
+    }
+
     public function test_owner_can_create_a_whatsapp_reservation_button(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
@@ -91,7 +106,7 @@ class DashboardEditorTest extends TestCase
         return $user->linkPage()->create([
             'username' => 'pagina-'.str()->lower(str()->random(8)),
             'display_name' => $user->name,
-            'theme' => ['background' => '#f8fafc', 'primary' => '#111827', 'text' => '#111827', 'radius' => 'rounded'],
+            'theme' => ['background' => '#f8fafc', 'primary' => '#111827', 'text' => '#111827', 'button_text' => '#ffffff', 'radius' => 'rounded'],
         ]);
     }
 }

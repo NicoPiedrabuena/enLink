@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
     Route::put('/dashboard/links/{link}', [DashboardController::class, 'updateLink'])->middleware('throttle:editor')->name('dashboard.links.update');
     Route::delete('/dashboard/links/{link}', [DashboardController::class, 'destroyLink'])->middleware('throttle:editor')->name('dashboard.links.destroy');
     Route::post('/dashboard/avatar', [DashboardController::class, 'updateAvatar'])->middleware('throttle:editor')->name('dashboard.avatar.update');
+    Route::post('/dashboard/background-image', [DashboardController::class, 'updateBackgroundImage'])->middleware('throttle:editor')->name('dashboard.background-image.update');
     Route::post('/dashboard/publish', [DashboardController::class, 'publish'])->middleware('throttle:publish')->name('dashboard.publish');
     Route::get('/dashboard/credits', [CreditController::class, 'index'])->name('credits.index');
     Route::post('/dashboard/checkout/{creditPackage}', [CreditController::class, 'checkout'])->middleware('throttle:checkout')->name('credits.checkout');

@@ -7,6 +7,24 @@
         default => '22px',
     };
     $buttonStyle = $theme['button_style'] ?? 'solid';
+    $automaticButtonTextColor = (function (string $color): string {
+        $hex = ltrim($color, '#');
+        if (!preg_match('/^[a-f0-9]{6}$/i', $hex)) return '#171713';
+
+        $channels = array_map(
+            fn (int $offset) => hexdec(substr($hex, $offset, 2)) / 255,
+            [0, 2, 4],
+        );
+        $linearChannels = array_map(
+            fn (float $channel) => $channel <= 0.03928 ? $channel / 12.92 : (($channel + 0.055) / 1.055) ** 2.4,
+            $channels,
+        );
+        $luminance = ($linearChannels[0] * 0.2126) + ($linearChannels[1] * 0.7152) + ($linearChannels[2] * 0.0722);
+
+        return (1.05 / ($luminance + 0.05)) >= (($luminance + 0.05) / 0.059) ? '#ffffff' : '#171713';
+    })($theme['primary']);
+    $linkTextColor = $theme['button_text'] ?? (in_array($buttonStyle, ['solid', 'shadow'], true) ? $automaticButtonTextColor : $theme['primary']);
+    $backgroundImageUrl = ! empty($theme['background_image']) ? \Illuminate\Support\Facades\Storage::disk('public')->url($theme['background_image']) : null;
     $avatarUrl = $profile['avatar_path'] ? \Illuminate\Support\Facades\Storage::disk('public')->url($profile['avatar_path']) : null;
     $description = $profile['bio'] ?: "Los enlaces de {$profile['display_name']}";
     $iconGlyphs = ['link' => '↗', 'google' => 'G', 'linkedin' => 'in', 'maps' => '⌖', 'instagram' => '◎', 'facebook' => 'f', 'whatsapp' => '◉', 'youtube' => '▶', 'tiktok' => '♪', 'spotify' => '≋', 'email' => '@', 'calendar' => '31'];
@@ -27,14 +45,14 @@
     <style>
         :root { color-scheme: light; }
         * { box-sizing: border-box; }
-        body { margin: 0; min-height: 100vh; background: {{ $theme['background'] }}; color: {{ $theme['text'] }}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        body { margin: 0; min-height: 100vh; background-color: {{ $theme['background'] }}; @if ($backgroundImageUrl) background-image: linear-gradient(rgb(0 0 0 / 8%), rgb(0 0 0 / 8%)), url('{{ $backgroundImageUrl }}'); background-position: center; background-size: cover; background-attachment: fixed; @endif color: {{ $theme['text'] }}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         .page { width: min(100% - 32px, 680px); margin: 0 auto; padding: 72px 0 40px; text-align: center; }
         .avatar, .avatar-placeholder { width: 96px; height: 96px; margin: 0 auto 18px; border-radius: 999px; object-fit: cover; box-shadow: 0 12px 30px rgb(15 23 42 / 18%); }
         .avatar-placeholder { display: grid; place-items: center; background: rgb(255 255 255 / 25%); color: inherit; font-size: 34px; font-weight: 800; }
         h1 { margin: 0; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.04em; }
         .bio { max-width: 540px; margin: 12px auto 34px; font-size: 16px; line-height: 1.5; opacity: .78; white-space: pre-line; }
         .links { display: grid; gap: 14px; }
-        .link { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 17px 24px; border-radius: {{ $radius }}; color: {{ $buttonStyle === 'solid' ? '#fff' : $theme['primary'] }}; font: inherit; font-size: 16px; font-weight: 750; text-decoration: none; cursor: pointer; transition: transform .18s ease, filter .18s ease; }
+        .link { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 17px 24px; border-radius: {{ $radius }}; color: {{ $linkTextColor }}; font: inherit; font-size: 16px; font-weight: 750; text-decoration: none; cursor: pointer; transition: transform .18s ease, filter .18s ease; }
         .link-icon { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border: 1px solid currentColor; border-radius: 7px; font-size: 12px; font-weight: 900; line-height: 1; opacity: .9; }
         .link-solid { border: 2px solid transparent; background: {{ $theme['primary'] }}; box-shadow: 0 8px 20px rgb(15 23 42 / 14%); }
         .link-outline { border: 2px solid {{ $theme['primary'] }}; background: transparent; box-shadow: none; }
