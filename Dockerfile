@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine AS base
+FROM php:8.5-fpm-alpine AS base
 
 RUN apk add --no-cache $PHPIZE_DEPS git icu-dev libzip-dev oniguruma-dev sqlite-dev freetype-dev libjpeg-turbo-dev libpng-dev su-exec \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
