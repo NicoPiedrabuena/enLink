@@ -26,7 +26,7 @@ class PublishPageAction
             $links = $page->links()
                 ->where('is_active', true)
                 ->orderBy('position')
-                ->get(['id', 'title', 'icon', 'url', 'type', 'settings', 'position']);
+                ->get(['id', 'title', 'icon', 'icon_image_path', 'url', 'type', 'settings', 'position']);
 
             if ($links->isEmpty()) {
                 throw ValidationException::withMessages([
@@ -39,10 +39,12 @@ class PublishPageAction
                 'bio' => $page->bio,
                 'avatar_path' => $page->avatar_path,
                 'theme' => $page->theme,
+                'social_links' => $page->social_links ?? [],
                 'links' => $links->map(fn ($link): array => [
                     'id' => $link->id,
                     'title' => $link->title,
                     'icon' => $link->icon,
+                    'icon_image_path' => $link->icon_image_path,
                     'url' => $link->url,
                     'type' => $link->type,
                     'settings' => $link->settings,

@@ -76,6 +76,22 @@ class PublicPageTest extends TestCase
         $this->assertStringContainsString('4 personas', urldecode($response->headers->get('Location')));
     }
 
+    public function test_banner_and_share_button_are_rendered_from_the_published_snapshot(): void
+    {
+        $page = $this->publishedPage();
+        $publication = $page->activePublication;
+        $payload = $publication->payload;
+        $payload['links'][0]['settings'] = ['layout' => 'banner'];
+        $payload['links'][0]['icon_image_path'] = 'link-icons/menu.jpg';
+        DB::table('page_publications')->where('id', $publication->id)->update(['payload' => json_encode($payload)]);
+
+        $this->get('/casa-publica')->assertOk()
+            ->assertSee('link-banner', false)
+            ->assertSee('link-icons/menu.jpg', false)
+            ->assertSee('Compartir Mi sitio')
+            ->assertSee('data-url="https://example.com/sitio"', false);
+    }
+
     private function publishedPage(): LinkPage
     {
         $user = User::factory()->create();

@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Storage;
 
 class LinkPage extends Model
 {
-    protected $fillable = ['username', 'display_name', 'bio', 'avatar_path', 'theme', 'active_publication_id', 'status', 'suspension_reason'];
+    protected $fillable = ['username', 'display_name', 'bio', 'avatar_path', 'theme', 'social_links', 'active_publication_id', 'status', 'suspension_reason'];
 
     protected $appends = ['avatar_url', 'background_image_url'];
 
     protected function casts(): array
     {
-        return ['theme' => 'array'];
+        return ['theme' => 'array', 'social_links' => 'array'];
     }
 
     public function user(): BelongsTo

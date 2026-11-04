@@ -23,8 +23,10 @@ use Inertia\Response;
 
 class AdminController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = trim((string) $request->input('search', ''));
+
         return Inertia::render('Admin', [
             'summary' => [
                 'users' => User::query()->count(),
@@ -34,9 +36,18 @@ class AdminController extends Controller
             ],
             'users' => User::query()
                 ->with(['creditBalance:id,user_id,balance', 'linkPage:id,user_id,username,status'])
+                ->when($search !== '', function ($query) use ($search): void {
+                    $query->where(function ($clientQuery) use ($search): void {
+                        $clientQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhereHas('linkPage', fn ($pageQuery) => $pageQuery->where('username', 'like', "%{$search}%"));
+                    });
+                })
                 ->latest()
-                ->limit(50)
+                ->limit(100)
                 ->get(['id', 'name', 'email', 'role', 'status', 'created_at']),
+            'filters' => ['search' => $search],
             'pages' => LinkPage::query()
                 ->with('user:id,name,email')
                 ->latest()

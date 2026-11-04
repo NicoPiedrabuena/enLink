@@ -70,6 +70,35 @@ class DashboardEditorTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_owner_can_upload_a_custom_image_for_a_link_icon(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $page = $this->pageFor($user);
+        $link = $page->links()->create([
+            'title' => 'Mi tienda',
+            'icon' => 'link',
+            'url' => 'https://example.com',
+            'position' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/dashboard/links/{$link->id}", [
+                '_method' => 'put',
+                'title' => 'Mi tienda',
+                'icon' => 'link',
+                'type' => 'link',
+                'url' => 'https://example.com',
+                'is_active' => true,
+                'icon_image' => UploadedFile::fake()->image('marca.png', 200, 200),
+            ])
+            ->assertRedirect();
+
+        $path = $link->refresh()->icon_image_path;
+        $this->assertNotNull($path);
+        Storage::disk('public')->assertExists($path);
+    }
+
     public function test_owner_can_create_a_whatsapp_reservation_button(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
@@ -99,6 +128,19 @@ class DashboardEditorTest extends TestCase
             'type' => 'reservation',
             'whatsapp_number' => '+54 11 abc',
         ])->assertSessionHasErrors('whatsapp_number');
+    }
+
+    public function test_link_can_be_saved_as_a_banner(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $page = $this->pageFor($user);
+
+        $this->actingAs($user)->post('/dashboard/links', [
+            'title' => 'Menú', 'icon' => 'link', 'type' => 'link',
+            'url' => 'https://example.com/menu', 'layout' => 'banner',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('banner', $page->links()->firstOrFail()->settings['layout']);
     }
 
     private function pageFor(User $user): LinkPage

@@ -24,7 +24,7 @@ const navItems = [
                     </Link>
                     <div class="hidden items-center gap-1 md:flex">
                         <Link v-for="item in navItems" :key="item.routeName" :href="route(item.routeName)" class="rounded-full px-4 py-2 text-sm font-extrabold transition" :class="route().current(item.active) ? 'bg-[#171713] text-white' : 'hover:bg-[#b9ff66]'">{{ item.label }}</Link>
-                        <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.index')" class="rounded-full px-4 py-2 text-sm font-extrabold transition" :class="route().current('admin.*') ? 'bg-[#171713] text-white' : 'hover:bg-[#b9ff66]'">Admin</Link>
+                        <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.index')" class="rounded-full px-4 py-2 text-sm font-extrabold transition" :class="route().current('admin.*') ? 'bg-[#171713] text-white' : 'hover:bg-[#b9ff66]'">Super Admin</Link>
                     </div>
                 </div>
 
@@ -50,7 +50,7 @@ const navItems = [
             <div v-if="menuOpen" class="border-t-2 border-[#171713] bg-[#b9ff66] p-4 md:hidden">
                 <div class="mx-auto grid max-w-7xl gap-2">
                     <Link v-for="item in navItems" :key="item.routeName" :href="route(item.routeName)" class="rounded-xl px-4 py-3 font-black" :class="route().current(item.active) ? 'bg-[#171713] text-white' : 'bg-white/60'">{{ item.label }}</Link>
-                    <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.index')" class="rounded-xl px-4 py-3 font-black" :class="route().current('admin.*') ? 'bg-[#171713] text-white' : 'bg-white/60'">Administración</Link>
+                    <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.index')" class="rounded-xl px-4 py-3 font-black" :class="route().current('admin.*') ? 'bg-[#171713] text-white' : 'bg-white/60'">Super Admin</Link>
                     <a v-if="$page.props.auth.publicUrl" :href="$page.props.auth.publicUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-white/60 px-4 py-3 font-black">Ver tu Enlink ↗</a>
                 </div>
             </div>

@@ -6,11 +6,13 @@ const props = withDefaults(
         show?: boolean;
         maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
         closeable?: boolean;
+        panelClass?: string;
     }>(),
     {
         show: false,
         maxWidth: '2xl',
         closeable: true,
+        panelClass: '',
     },
 );
 
@@ -111,7 +113,7 @@ const maxWidthClass = computed(() => {
                 <div
                     v-show="show"
                     class="mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:mx-auto sm:w-full dark:bg-gray-800"
-                    :class="maxWidthClass"
+                    :class="[maxWidthClass, panelClass]"
                 >
                     <slot v-if="showSlot" />
                 </div>

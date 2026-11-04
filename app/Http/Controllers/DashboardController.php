@@ -22,7 +22,9 @@ class DashboardController extends Controller
 {
     private const RESERVED = ['admin', 'api', 'login', 'register', 'dashboard', 'settings', 'pricing', 'support', 'terms', 'privacy', 'help', 'assets', 'profile', 'logout'];
 
-    private const LINK_ICONS = ['link', 'google', 'linkedin', 'maps', 'instagram', 'facebook', 'whatsapp', 'youtube', 'tiktok', 'spotify', 'email', 'calendar'];
+    private const LINK_ICONS = ['link', 'google', 'linkedin', 'maps', 'instagram', 'facebook', 'whatsapp', 'youtube', 'tiktok', 'spotify', 'gmail', 'email', 'calendar', 'telegram', 'x', 'threads', 'twitch', 'discord', 'pinterest', 'snapchat', 'calendly'];
+
+    private const SOCIAL_NETWORKS = ['instagram', 'facebook', 'whatsapp', 'youtube', 'tiktok', 'spotify', 'linkedin', 'gmail', 'telegram', 'x', 'threads', 'twitch', 'discord', 'pinterest', 'snapchat'];
 
     public function show(Request $request): Response
     {
@@ -58,11 +60,26 @@ class DashboardController extends Controller
             'username' => strtolower(trim((string) $request->input('username'))),
         ]);
 
-        $data = $request->validate(['username' => ['required', 'regex:/^[a-z]+(?:-[a-z]+)*$/', 'min:3', 'max:30', Rule::unique('link_pages', 'username')->ignore($page), Rule::notIn(self::RESERVED)], 'display_name' => ['required', 'string', 'max:80'], 'bio' => ['nullable', 'string', 'max:180'], 'theme' => ['required', 'array'], 'theme.background' => ['required', 'string', 'max:20'], 'theme.primary' => ['required', 'string', 'max:20'], 'theme.text' => ['required', 'string', 'max:20'], 'theme.button_text' => ['sometimes', 'regex:/^#[0-9a-fA-F]{6}$/'], 'theme.radius' => ['required', Rule::in(['rounded', 'soft', 'square'])], 'theme.button_style' => ['sometimes', Rule::in(['solid', 'outline', 'shadow', 'transparent'])]]);
+        $data = $request->validate([
+            'username' => ['required', 'regex:/^[a-z]+(?:-[a-z]+)*$/', 'min:3', 'max:30', Rule::unique('link_pages', 'username')->ignore($page), Rule::notIn(self::RESERVED)],
+            'display_name' => ['required', 'string', 'max:80'],
+            'bio' => ['nullable', 'string', 'max:180'],
+            'theme' => ['required', 'array'],
+            'theme.background' => ['required', 'string', 'max:20'],
+            'theme.primary' => ['required', 'string', 'max:20'],
+            'theme.text' => ['required', 'string', 'max:20'],
+            'theme.button_text' => ['sometimes', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme.radius' => ['required', Rule::in(['rounded', 'soft', 'square'])],
+            'theme.button_style' => ['sometimes', Rule::in(['solid', 'outline', 'shadow', 'transparent'])],
+            'social_links' => ['sometimes', 'array', 'max:8'],
+            'social_links.*.network' => ['required_with:social_links', 'distinct', Rule::in(self::SOCIAL_NETWORKS)],
+            'social_links.*.url' => ['required_with:social_links', 'url', 'max:2048', 'regex:/^https?:\/\//i'],
+        ]);
         $data['theme']['button_style'] ??= $page->theme['button_style'] ?? 'solid';
         $data['theme']['button_text'] ??= $page->theme['button_text'] ?? '#ffffff';
         $data['theme']['background_image'] = $page->theme['background_image'] ?? null;
         $data['username'] = strtolower($data['username']);
+        $data['social_links'] = array_values($data['social_links'] ?? $page->social_links ?? []);
         $page->update($data);
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Datos y apariencia guardados.']);
@@ -72,7 +89,8 @@ class DashboardController extends Controller
     {
         $page = $request->user()->linkPage;
         $data = $this->validatedLink($request);
-        $page->links()->create($data + ['position' => ($page->links()->max('position') ?? -1) + 1]);
+        $link = $page->links()->create($data + ['position' => ($page->links()->max('position') ?? -1) + 1]);
+        $this->replaceLinkIconImage($request, $link);
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Enlace agregado.']);
     }
@@ -82,6 +100,7 @@ class DashboardController extends Controller
         abort_unless($link->linkPage->user_id === $request->user()->id, 403);
         $data = $this->validatedLink($request, true);
         $link->update($data);
+        $this->replaceLinkIconImage($request, $link);
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Enlace actualizado.']);
     }
@@ -96,27 +115,65 @@ class DashboardController extends Controller
             'url' => [Rule::requiredIf($request->input('type') === 'link'), 'nullable', 'url', 'max:2048', 'regex:/^https?:\/\//i'],
             'whatsapp_number' => [Rule::requiredIf($request->input('type') === 'reservation'), 'nullable', 'string', 'regex:/^[1-9][0-9]{7,14}$/'],
             'is_active' => [$updating ? 'required' : 'sometimes', 'boolean'],
+            'icon_image' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp', 'max:1024', 'dimensions:min_width=32,min_height=32,max_width=2000,max_height=2000'],
+            'remove_icon_image' => ['sometimes', 'boolean'],
+            'layout' => ['sometimes', Rule::in(['button', 'banner'])],
         ]);
 
+        $layout = $data['layout'] ?? 'button';
         if ($data['type'] === 'reservation') {
             $number = $data['whatsapp_number'];
             $data['url'] = "https://wa.me/{$number}";
-            $data['settings'] = ['whatsapp_number' => $number];
+            $data['settings'] = ['whatsapp_number' => $number, 'layout' => $layout];
         } else {
-            $data['settings'] = null;
+            $data['settings'] = ['layout' => $layout];
         }
 
-        unset($data['whatsapp_number']);
+        unset($data['whatsapp_number'], $data['icon_image'], $data['remove_icon_image'], $data['layout']);
 
         return $data;
+    }
+
+    private function replaceLinkIconImage(Request $request, Link $link): void
+    {
+        if ($request->hasFile('icon_image')) {
+            $path = $request->file('icon_image')->store("link-icons/{$link->link_page_id}", 'public');
+
+            if ($link->icon_image_path) {
+                $this->deleteDraftLinkImage($link);
+            }
+
+            $link->update(['icon_image_path' => $path]);
+
+            return;
+        }
+
+        if ($request->boolean('remove_icon_image') && $link->icon_image_path) {
+            $this->deleteDraftLinkImage($link);
+            $link->update(['icon_image_path' => null]);
+        }
     }
 
     public function destroyLink(Request $request, Link $link): RedirectResponse
     {
         abort_unless($link->linkPage->user_id === $request->user()->id, 403);
+
+        if ($link->icon_image_path) {
+            $this->deleteDraftLinkImage($link);
+        }
+
         $link->delete();
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Enlace eliminado.']);
+    }
+
+    private function deleteDraftLinkImage(Link $link): void
+    {
+        $publishedLinks = $link->linkPage->activePublication?->payload['links'] ?? [];
+        $inUse = collect($publishedLinks)->contains(fn ($published) => ($published['icon_image_path'] ?? null) === $link->icon_image_path);
+        if (! $inUse) {
+            Storage::disk('public')->delete($link->icon_image_path);
+        }
     }
 
     public function reorderLinks(Request $request): RedirectResponse

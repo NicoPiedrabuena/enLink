@@ -70,11 +70,11 @@ const plans = [
                     <div class="phone-float relative mx-auto w-[min(82vw,340px)] rounded-[3rem] border-[10px] border-[#171713] bg-[#d6ccff] p-4 shadow-[0_35px_80px_rgba(32,20,76,.28)]">
                         <div class="mx-auto mb-5 h-5 w-24 rounded-full bg-[#171713]"></div>
                         <div class="rounded-[2.15rem] bg-[#f7f5ef] px-5 pb-7 pt-9 text-center">
-                            <div class="mx-auto grid size-20 place-items-center rounded-full bg-[#171713] text-2xl font-black text-[#b9ff66] shadow-lg">RC</div>
-                            <h2 class="mt-4 text-2xl font-black tracking-tight">RAÍZ CERVECERÍA</h2>
-                            <p class="mt-1 text-sm text-black/55">Cerveza, amigos y buenos momentos.</p>
+                            <div class="mx-auto grid size-20 place-items-center rounded-full bg-[#171713] text-2xl font-black text-[#b9ff66] shadow-lg">MS</div>
+                            <h2 class="mt-4 text-2xl font-black tracking-tight">MICA STUDIO</h2>
+                            <p class="mt-1 text-sm text-black/55">Diseño, ideas y proyectos con propósito.</p>
                             <div class="mt-6 space-y-3">
-                                <div v-for="(link, i) in ['Nuestra carta', 'Instagram', 'Reservá tu mesa']" :key="link" class="link-card flex items-center justify-between rounded-2xl px-5 py-4 font-extrabold shadow-[4px_4px_0_#171713]" :class="[i === 0 ? 'bg-[#b9ff66]' : i === 1 ? 'bg-[#ff9eca]' : 'bg-[#ffd568]']">{{ link }} <span>↗</span></div>
+                                <div v-for="(link, i) in ['Conocé mi trabajo', 'Instagram', 'Hablemos']" :key="link" class="link-card flex items-center justify-between rounded-2xl px-5 py-4 font-extrabold shadow-[4px_4px_0_#171713]" :class="[i === 0 ? 'bg-[#b9ff66]' : i === 1 ? 'bg-[#ff9eca]' : 'bg-[#ffd568]']">{{ link }} <span>↗</span></div>
                             </div>
                             <div class="mt-7 text-xs font-black tracking-wide text-black/40">ENLINK</div>
                         </div>
