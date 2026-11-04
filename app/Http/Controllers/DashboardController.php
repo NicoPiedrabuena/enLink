@@ -118,6 +118,13 @@ class DashboardController extends Controller
             'icon_image' => ['nullable', 'file', 'image', 'mimetypes:image/jpeg,image/png,image/webp', 'max:1024', 'dimensions:min_width=32,min_height=32,max_width=2000,max_height=2000'],
             'remove_icon_image' => ['sometimes', 'boolean'],
             'layout' => ['sometimes', Rule::in(['button', 'banner'])],
+        ], [
+            'icon_image.uploaded' => 'No se pudo subir la imagen. Verificá que pese hasta 1 MB e intentá de nuevo.',
+            'icon_image.file' => 'Seleccioná un archivo de imagen válido.',
+            'icon_image.image' => 'Seleccioná una imagen válida en formato JPG, PNG o WEBP.',
+            'icon_image.mimetypes' => 'La imagen debe estar en formato JPG, PNG o WEBP.',
+            'icon_image.max' => 'La imagen debe pesar como máximo 1 MB.',
+            'icon_image.dimensions' => 'La imagen debe medir entre 32 × 32 y 2000 × 2000 píxeles.',
         ]);
 
         $layout = $data['layout'] ?? 'button';

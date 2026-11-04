@@ -99,6 +99,24 @@ class DashboardEditorTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_link_image_upload_errors_are_clear(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->pageFor($user);
+        $file = UploadedFile::fake()->image('imagen.png', 200, 200);
+        $failedUpload = new UploadedFile($file->getPathname(), 'imagen.png', 'image/png', UPLOAD_ERR_INI_SIZE, true);
+
+        $this->actingAs($user)->post('/dashboard/links', [
+            'title' => 'Mi enlace', 'icon' => 'link', 'type' => 'link',
+            'url' => 'https://example.com', 'icon_image' => $failedUpload,
+        ])->assertSessionHasErrors(['icon_image' => 'No se pudo subir la imagen. Verificá que pese hasta 1 MB e intentá de nuevo.']);
+
+        $this->actingAs($user)->post('/dashboard/links', [
+            'title' => 'Mi enlace', 'icon' => 'link', 'type' => 'link',
+            'url' => 'https://example.com', 'icon_image' => UploadedFile::fake()->image('imagen.png', 200, 200)->size(1025),
+        ])->assertSessionHasErrors(['icon_image' => 'La imagen debe pesar como máximo 1 MB.']);
+    }
+
     public function test_owner_can_create_a_whatsapp_reservation_button(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
