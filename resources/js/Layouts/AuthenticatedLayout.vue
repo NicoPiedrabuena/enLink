@@ -29,12 +29,12 @@ const navItems = [
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a v-if="$page.props.auth.publicUrl" :href="$page.props.auth.publicUrl" target="_blank" rel="noopener noreferrer" class="hidden rounded-full border-2 border-[#171713] px-4 py-2 text-sm font-extrabold transition hover:-translate-y-0.5 hover:bg-white sm:block">Ver tu Enlink ↗</a>
+                    <a v-if="$page.props.auth.publicUrl" :href="$page.props.auth.publicUrl" target="_blank" rel="noopener noreferrer" class="hidden items-center gap-2 rounded-full border-2 border-[#171713] px-4 py-2 text-sm font-extrabold transition hover:-translate-y-0.5 hover:bg-white sm:inline-flex">Ver tu Enlink <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h6v6M19 5l-9 9" /><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg></a>
                     <Dropdown align="right" width="48">
                         <template #trigger>
                             <button class="flex items-center gap-2 rounded-full bg-[#6e35ff] py-2 pl-2 pr-4 text-sm font-extrabold text-white transition hover:bg-[#5d27e8]">
                                 <span class="grid size-8 place-items-center rounded-full bg-[#b9ff66] text-[#171713]">{{ $page.props.auth.user.name.slice(0, 1).toUpperCase() }}</span>
-                                <span class="hidden sm:inline">{{ $page.props.auth.user.name }}</span><span>⌄</span>
+                                <span class="hidden sm:inline">{{ $page.props.auth.user.name }}</span><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </button>
                         </template>
                         <template #content>
@@ -51,7 +51,7 @@ const navItems = [
                 <div class="mx-auto grid max-w-7xl gap-2">
                     <Link v-for="item in navItems" :key="item.routeName" :href="route(item.routeName)" class="rounded-xl px-4 py-3 font-black" :class="route().current(item.active) ? 'bg-[#171713] text-white' : 'bg-white/60'">{{ item.label }}</Link>
                     <Link v-if="$page.props.auth.user.role === 'admin'" :href="route('admin.index')" class="rounded-xl px-4 py-3 font-black" :class="route().current('admin.*') ? 'bg-[#171713] text-white' : 'bg-white/60'">Super Admin</Link>
-                    <a v-if="$page.props.auth.publicUrl" :href="$page.props.auth.publicUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-white/60 px-4 py-3 font-black">Ver tu Enlink ↗</a>
+                    <a v-if="$page.props.auth.publicUrl" :href="$page.props.auth.publicUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-3 font-black">Ver tu Enlink <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h6v6M19 5l-9 9" /><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg></a>
                 </div>
             </div>
         </nav>
