@@ -105,6 +105,19 @@ class PublicPageTest extends TestCase
             ->assertSee('data-url="https://example.com/sitio"', false);
     }
 
+    public function test_background_image_is_preloaded_on_the_public_page(): void
+    {
+        $page = $this->publishedPage();
+        $publication = $page->activePublication;
+        $payload = $publication->payload;
+        $payload['theme']['background_image'] = 'backgrounds/fondo.jpg';
+        DB::table('page_publications')->where('id', $publication->id)->update(['payload' => json_encode($payload)]);
+
+        $this->get('/casa-publica')->assertOk()
+            ->assertSee('rel="preload" as="image"', false)
+            ->assertSee('backgrounds/fondo.jpg', false);
+    }
+
     private function publishedPage(): LinkPage
     {
         $user = User::factory()->create();

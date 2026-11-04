@@ -36,6 +36,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @if ($backgroundImageUrl)<link rel="preload" as="image" href="{{ $backgroundImageUrl }}" fetchpriority="high">@endif
     <title>{{ $profile['display_name'] }} · Enlink</title>
     <meta name="description" content="{{ $description }}">
     <link rel="canonical" href="{{ url('/'.$publication->username) }}">
@@ -101,7 +102,7 @@
 <body>
     <main class="page">
         @if ($avatarUrl)
-            <img class="avatar" src="{{ $avatarUrl }}" alt="Foto de {{ $profile['display_name'] }}">
+            <img class="avatar" src="{{ $avatarUrl }}" alt="Foto de {{ $profile['display_name'] }}" decoding="async">
         @else
             <div class="avatar-placeholder" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($profile['display_name'], 0, 1)) }}</div>
         @endif
@@ -137,7 +138,7 @@
                     @else
                         <a class="link link-{{ $buttonStyle }} {{ $isBanner ? 'link-banner' : '' }}" href="{{ $trackedUrl }}" target="_blank" rel="noopener noreferrer">
                     @endif
-                        @if ($isBanner)<img src="{{ $customIconUrl }}" alt="">@elseif ($customIconUrl)<img class="link-icon link-icon--image" src="{{ $customIconUrl }}" alt="">@else<span class="link-icon link-icon--brand" style="--icon-image: url('{{ asset('social-icons/'.$iconAsset.'.svg') }}')" aria-hidden="true"></span>@endif
+                        @if ($isBanner)<img src="{{ $customIconUrl }}" alt="" decoding="async" @if ($loop->index > 1) loading="lazy" @endif>@elseif ($customIconUrl)<img class="link-icon link-icon--image" src="{{ $customIconUrl }}" alt="" decoding="async" @if ($loop->index > 1) loading="lazy" @endif>@else<span class="link-icon link-icon--brand" style="--icon-image: url('{{ asset('social-icons/'.$iconAsset.'.svg') }}')" aria-hidden="true"></span>@endif
                         <span class="{{ $isBanner ? 'link-banner-title' : '' }}">{{ $link['title'] }}</span>
                     @if (($link['type'] ?? 'link') === 'reservation')</button>@else</a>@endif
                     <button class="link-share" type="button" data-url="{{ $shareUrl }}" data-title="{{ $link['title'] }}" aria-label="Compartir {{ $link['title'] }}" title="Compartir {{ $link['title'] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
