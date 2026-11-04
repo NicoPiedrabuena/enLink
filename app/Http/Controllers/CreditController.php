@@ -6,6 +6,7 @@ use App\Actions\Payments\CheckoutUnavailableException;
 use App\Actions\Payments\CreateMercadoPagoCheckoutAction;
 use App\Models\CreditPackage;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
