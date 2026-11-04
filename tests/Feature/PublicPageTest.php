@@ -39,6 +39,19 @@ class PublicPageTest extends TestCase
             ->assertDontSee('Enlace sin publicar');
     }
 
+    public function test_public_page_renders_published_social_links(): void
+    {
+        $page = $this->publishedPage();
+        $publication = $page->activePublication;
+        $payload = $publication->payload;
+        $payload['social_links'] = [['network' => 'instagram', 'url' => 'https://instagram.com/casa']];
+        DB::table('page_publications')->where('id', $publication->id)->update(['payload' => json_encode($payload)]);
+
+        $this->get('/casa-publica')->assertOk()
+            ->assertSee('https://instagram.com/casa', false)
+            ->assertSee('aria-label="Instagram"', false);
+    }
+
     public function test_username_without_an_active_publication_returns_not_found(): void
     {
         $user = User::factory()->create();

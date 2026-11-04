@@ -370,12 +370,10 @@ const publish = () => router.post('/dashboard/publish', {}, {
 
                     <aside v-if="!isVisitorPreview" class="space-y-4 lg:sticky lg:top-5">
                         <section class="status-card p-5">
-                            <div class="flex items-start justify-between gap-4">
-                                <div><p class="text-xs font-black uppercase tracking-[0.14em] text-[#6e35ff]">Estado</p><h2 class="mt-1 text-lg font-black">{{ hasPublishedVersion ? 'Página publicada' : 'Borrador' }}</h2></div>
-                                <span class="mt-1 h-3 w-3 rounded-full" :class="hasPublishedVersion ? 'bg-emerald-500' : 'bg-amber-400'" />
-                            </div>
-                            <p class="mt-2 text-sm leading-relaxed text-[#171713]/60">{{ hasPublishedVersion ? `Versión ${props.page.active_publication?.version} visible para tus visitas.` : 'Editá libremente y publicá cuando esté lista para compartir.' }}</p>
-                            <a v-if="props.publicUrl" :href="props.publicUrl" target="_blank" rel="noopener noreferrer" class="mt-4 block rounded-full border-2 border-[#171713] px-4 py-2.5 text-center text-sm font-black transition hover:bg-[#b9ff66]">Abrir página publicada ↗</a>
+                            <p class="status-eyebrow">Tu página</p>
+                            <div class="status-heading"><span class="status-indicator" :class="hasPublishedVersion ? 'bg-emerald-500' : 'bg-amber-400'" /><h2>{{ hasPublishedVersion ? 'Publicada' : 'Borrador' }}</h2></div>
+                            <p class="status-description">{{ hasPublishedVersion ? `Versión ${props.page.active_publication?.version} disponible para tus visitas.` : 'Editá libremente y publicá cuando esté lista para compartir.' }}</p>
+                            <a v-if="props.publicUrl" :href="props.publicUrl" target="_blank" rel="noopener noreferrer" class="status-link"><span>Ver página publicada</span><span aria-hidden="true">↗</span></a>
                         </section>
 
                         <section class="control-card overflow-hidden p-2">
@@ -488,7 +486,8 @@ const publish = () => router.post('/dashboard/publish', {}, {
 .link-layout-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .link-layout-option { display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 2px solid #ddd8e8; border-radius: 14px; background: white; cursor: pointer; }
 .link-layout-option--selected { border-color: #6e35ff; background: #f3eeff; }
-.link-layout-option input { margin-top: 3px; color: #6e35ff; }
+.link-layout-option input { flex: none; margin-top: 3px; color: #6e35ff; }
+.link-layout-option span { min-width: 0; }
 .link-layout-option strong, .link-layout-option small { display: block; }
 .link-layout-option small { margin-top: 4px; color: #666; font-weight: 500; line-height: 1.35; }
 .link-drag-handle { position: absolute; z-index: 2; top: 8px; right: 8px; display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: rgb(23 23 19 / 75%); color: white; font-size: 20px; line-height: 1; cursor: grab; touch-action: none; user-select: none; }
@@ -504,9 +503,15 @@ const publish = () => router.post('/dashboard/publish', {}, {
 .link-edit-icon { position: absolute; right: 15px; font-size: 14px; opacity: 0; transition: opacity .18s ease; }
 .group:hover .link-edit-icon, .group:focus-visible .link-edit-icon { opacity: .78; }
 .add-link-card { color: inherit; }
-.status-card { border: 2px solid #171713; border-radius: 1.5rem; background: #171713; box-shadow: 5px 5px 0 #6e35ff; color: #fff; }
-.status-card h2 { color: #fff; }
-.status-card p { color: rgb(255 255 255 / 68%); }
+.status-card { border: 1px solid #dedbd3; border-radius: 1.5rem; background: #fff; color: #171713; box-shadow: 0 4px 16px rgb(23 23 19 / 5%); }
+.status-eyebrow { color: #77736b; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.status-heading { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+.status-heading h2 { font-size: 18px; font-weight: 900; }
+.status-indicator { width: 10px; height: 10px; border-radius: 50%; }
+.status-description { margin-top: 7px; color: #69665f; font-size: 13px; line-height: 1.5; }
+.status-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 11px 14px; border-radius: 12px; background: #f1ebff; color: #5924d6; font-size: 13px; font-weight: 800; transition: background .18s ease; }
+.status-link:hover { background: #e6d9ff; }
+.status-link:focus-visible { outline: 3px solid #6e35ff; outline-offset: 2px; }
 .control-card { border: 2px solid #171713; border-radius: 1.5rem; background: #fff; box-shadow: 5px 5px 0 #171713; }
 .control-action { display: grid; width: 100%; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; border-radius: 1rem; padding: 12px; text-align: left; transition: background-color .18s ease, transform .18s ease; }
 .control-action:hover { background: #f0edff; transform: translateX(2px); }
@@ -526,8 +531,8 @@ const publish = () => router.post('/dashboard/publish', {}, {
 .modal-close:hover { transform: rotate(6deg); background: #b9ff66; }
 .field-label { display: grid; gap: 7px; color: #312f2a; font-size: 13px; font-weight: 850; }
 .field-label legend { padding: 0; }
-.field-label input, .field-label textarea, .field-label select { width: 100%; border: 1.5px solid #cfc5ea; border-radius: 12px; background: rgb(255 255 255 / 92%); box-shadow: 0 2px 0 rgb(23 23 19 / 5%); color: #171713; font: inherit; font-size: 14px; font-weight: 500; }
-.field-label input, .field-label select { min-height: 45px; padding: 0 12px; }
+.field-label input:not([type="radio"]):not([type="checkbox"]), .field-label textarea, .field-label select { width: 100%; border: 1.5px solid #cfc5ea; border-radius: 12px; background: rgb(255 255 255 / 92%); box-shadow: 0 2px 0 rgb(23 23 19 / 5%); color: #171713; font: inherit; font-size: 14px; font-weight: 500; }
+.field-label input:not([type="radio"]):not([type="checkbox"]), .field-label select { min-height: 45px; padding: 0 12px; }
 .field-label textarea { padding: 11px 12px; resize: vertical; }
 .field-label input:focus, .field-label textarea:focus, .field-label select:focus { border-color: #6e35ff; box-shadow: 0 0 0 4px rgb(110 53 255 / 16%); outline: none; }
 .field-hint { color: #6f687d; font-size: 11px; font-weight: 650; }

@@ -110,7 +110,9 @@
         @if (count($socialLinks))
             <nav class="social-links" aria-label="Redes sociales de {{ $profile['display_name'] }}">
                 @foreach ($socialLinks as $socialLink)
-                    @php($network = $socialLink['network'] ?? '')
+                    @php
+                        $network = $socialLink['network'] ?? '';
+                    @endphp
                     @if (isset($iconAssets[$network], $socialLabels[$network]) && ! empty($socialLink['url']))
                         <a class="social-link" href="{{ $socialLink['url'] }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $socialLabels[$network] }}"><span class="brand-mark" style="--icon-image: url('{{ asset('social-icons/'.$iconAssets[$network].'.svg') }}')" aria-hidden="true"></span><span class="sr-only">{{ $socialLabels[$network] }}</span></a>
                     @endif
