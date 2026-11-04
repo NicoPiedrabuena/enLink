@@ -138,6 +138,10 @@ const linkIconPreviewUrl = ref<string | null>(null);
 const publishProcessing = ref(false);
 const publishError = ref<string | null>(null);
 const isVisitorPreview = ref(false);
+const draggingLinkId = ref<number | null>(null);
+const reorderProcessing = ref(false);
+const reorderError = ref('');
+let orderBeforeDrag: LinkItem[] = [];
 
 watch(() => props.page.links, (value) => {
     links.value = value.map((link) => ({ ...link, type: link.type ?? 'link', whatsapp_number: link.settings?.whatsapp_number ?? '' })).sort((a, b) => a.position - b.position);
@@ -146,6 +150,51 @@ watch(() => props.page.avatar_url, (value) => { avatarUrl.value = value; });
 watch(() => props.page.background_image_url, (value) => { backgroundImageUrl.value = value; });
 
 const activeLinks = computed(() => links.value.filter((link) => link.is_active));
+const moveLink = (id: number, targetId: number) => {
+    const from = links.value.findIndex((link) => link.id === id);
+    const to = links.value.findIndex((link) => link.id === targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    const reordered = [...links.value];
+    const [link] = reordered.splice(from, 1);
+    reordered.splice(to, 0, link);
+    links.value = reordered;
+};
+const saveLinkOrder = (previous: LinkItem[]) => {
+    if (links.value.every((link, index) => link.id === previous[index]?.id)) return;
+    reorderError.value = '';
+    router.put('/dashboard/links/reorder', { links: links.value.map((link) => link.id) }, {
+        preserveScroll: true,
+        onStart: () => { reorderProcessing.value = true; },
+        onError: () => { links.value = previous; reorderError.value = 'No se pudo guardar el orden. Intentá de nuevo.'; },
+        onFinish: () => { reorderProcessing.value = false; },
+    });
+};
+const startLinkDrag = (event: PointerEvent, id: number) => {
+    if (reorderProcessing.value || event.button !== 0) return;
+    orderBeforeDrag = [...links.value];
+    draggingLinkId.value = id;
+    (event.currentTarget as HTMLElement).closest('section')?.setPointerCapture(event.pointerId);
+};
+const dragLink = (event: PointerEvent) => {
+    if (draggingLinkId.value === null) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-link-id]');
+    if (target?.dataset.linkId) moveLink(draggingLinkId.value, Number(target.dataset.linkId));
+};
+const finishLinkDrag = (cancelled = false) => {
+    if (draggingLinkId.value === null) return;
+    draggingLinkId.value = null;
+    if (cancelled) links.value = orderBeforeDrag;
+    else saveLinkOrder(orderBeforeDrag);
+};
+const moveLinkByKeyboard = (id: number, direction: number) => {
+    if (reorderProcessing.value) return;
+    const index = activeLinks.value.findIndex((link) => link.id === id);
+    const target = activeLinks.value[index + direction];
+    if (!target) return;
+    const previous = [...links.value];
+    moveLink(id, target.id);
+    saveLinkOrder(previous);
+};
 const hasPublishedVersion = computed(() => props.page.active_publication !== null);
 const isOnboarding = computed(() => !hasPublishedVersion.value && links.value.length === 0);
 const publishLabel = computed(() => props.credits.balance > 0 ? 'Publicar por 1 crédito' : 'Publicar · Pack $5.000');
@@ -303,10 +352,15 @@ const publish = () => router.post('/dashboard/publish', {}, {
                             </div>
                             <button v-if="!form.social_links.length && !isVisitorPreview" class="mt-2 text-xs font-bold underline underline-offset-4 opacity-65" type="button" @click="openSocialModal()">Sumá tus redes sociales</button>
 
-                            <section class="mx-auto mt-9 grid max-w-[600px] gap-3" aria-label="Tus enlaces">
-                                <button v-for="link in activeLinks" :key="link.id" class="group relative flex min-h-14 items-center justify-center px-16 py-3 text-center text-base font-extrabold transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-[#b9ff66]" :class="[radiusClass(form.theme.radius), { 'preview-banner': link.settings?.layout === 'banner' && link.icon_image_url }]" :style="previewButtonStyle" type="button" :disabled="isVisitorPreview" @click="openEditLink(link)">
+                            <section class="mx-auto mt-9 grid max-w-[600px] gap-3" aria-label="Tus enlaces" @pointermove="dragLink" @pointerup="finishLinkDrag()" @pointercancel="finishLinkDrag(true)">
+                                <p v-if="!isVisitorPreview && activeLinks.length > 1" class="text-xs font-bold opacity-75">Arrastrá ⋮⋮ para ordenar tus enlaces.</p>
+                                <p v-if="reorderError && !isVisitorPreview" role="alert" class="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{{ reorderError }}</p>
+                                <div v-for="link in activeLinks" :key="link.id" class="relative" :class="{ 'opacity-60': draggingLinkId === link.id }" :data-link-id="link.id">
+                                <button class="group relative flex w-full min-h-14 items-center justify-center px-16 py-3 text-center text-base font-extrabold transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-[#b9ff66]" :class="[radiusClass(form.theme.radius), { 'preview-banner': link.settings?.layout === 'banner' && link.icon_image_url }]" :style="previewButtonStyle" type="button" :disabled="isVisitorPreview" @click="openEditLink(link)">
                                     <img v-if="link.icon_image_url" :src="link.icon_image_url" :class="link.settings?.layout === 'banner' ? 'preview-banner-image' : 'link-button-image'" alt="" /><span v-else class="brand-icon brand-icon--button link-button-icon" :style="iconStyle(link.icon)" aria-hidden="true" /><span>{{ link.title }}</span><span class="link-edit-icon">✎</span>
                                 </button>
+                                <button v-if="!isVisitorPreview && activeLinks.length > 1" class="link-drag-handle" type="button" :disabled="reorderProcessing" :aria-label="`Ordenar ${link.title}: arrastrá o usá las flechas arriba y abajo`" title="Arrastrá para ordenar" @pointerdown.prevent="startLinkDrag($event, link.id)" @keydown.up.prevent="moveLinkByKeyboard(link.id, -1)" @keydown.down.prevent="moveLinkByKeyboard(link.id, 1)">⋮⋮</button>
+                                </div>
                                 <p v-if="links.length && !activeLinks.length" class="rounded-2xl border border-dashed border-current/40 p-4 text-sm opacity-65">Tus enlaces están pausados. Tocá uno desde el panel para activarlo.</p>
                                 <button v-if="!isVisitorPreview" class="add-link-card flex min-h-14 items-center justify-center gap-2 rounded-[1.35rem] border-2 border-dashed px-5 py-3 text-sm font-black transition hover:bg-white/20" type="button" @click="openNewLink"><span class="grid h-6 w-6 place-items-center rounded-full bg-current text-sm leading-none"><span :style="{ color: form.theme.background }">+</span></span> Agregar enlace</button>
                             </section>
@@ -372,7 +426,7 @@ const publish = () => router.post('/dashboard/publish', {}, {
             <form class="mt-6 grid gap-4" @submit.prevent="saveLink">
                 <label class="field-label">Tipo<select v-model="linkForm.type" @change="detectLinkIcon"><option value="link">Enlace normal</option><option value="reservation">Reserva por WhatsApp</option></select></label>
                 <label class="field-label">Nombre del botón<input v-model="linkForm.title" maxlength="100" placeholder="Ej: Visitá mi tienda" required /></label>
-                <label class="field-label">Formato<select v-model="linkForm.layout"><option value="button">Botón con imagen a la izquierda</option><option value="banner">Banner con imagen grande</option></select><span v-if="linkForm.layout === 'banner'" class="field-hint">Subí una imagen para mostrar el banner.</span></label>
+                <fieldset class="field-label"><legend>¿Cómo querés mostrar el enlace?</legend><div class="link-layout-options"><label class="link-layout-option" :class="{ 'link-layout-option--selected': linkForm.layout === 'button' }"><input v-model="linkForm.layout" type="radio" value="button" /><span><strong>Ícono</strong><small>Imagen o ícono pequeño a la izquierda del texto.</small></span></label><label class="link-layout-option" :class="{ 'link-layout-option--selected': linkForm.layout === 'banner' }"><input v-model="linkForm.layout" type="radio" value="banner" /><span><strong>Banner</strong><small>Imagen grande arriba del texto.</small></span></label></div><span v-if="linkForm.layout === 'banner'" class="field-hint">Subí una imagen para mostrar el banner. Después podés arrastrarlo hasta el primer lugar.</span></fieldset>
                 <fieldset class="field-label"><legend>Elegí un ícono</legend><div class="icon-library icon-library--links"><button v-for="icon in iconOptions" :key="icon.value" class="icon-choice" :class="{ 'icon-choice--selected': linkForm.icon === icon.value && !linkIconPreviewUrl }" type="button" :title="icon.label" @click="linkForm.icon = icon.value; removeLinkIconImage()"><span class="brand-icon" :style="iconStyle(icon.value)" aria-hidden="true" /><span class="icon-choice-label">{{ icon.label }}</span></button></div></fieldset>
                 <div class="field-label"><span>Imagen del enlace <span class="field-hint">Opcional · JPG, PNG o WEBP · hasta 1 MB</span></span><div class="custom-icon-upload"><img v-if="linkIconPreviewUrl" :src="linkIconPreviewUrl" class="custom-icon-preview" alt="" /><span v-else class="custom-icon-placeholder">▧</span><div><label class="cursor-pointer rounded-full border-2 border-[#171713] bg-white px-4 py-2 text-sm font-black">Subir imagen<input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" @change="uploadLinkIconImage" /></label><button v-if="linkIconPreviewUrl" class="ml-2 text-sm font-black text-rose-600 underline underline-offset-4" type="button" @click="removeLinkIconImage">Quitar</button></div></div></div>
                 <label v-if="linkForm.type === 'link'" class="field-label">Dirección web<input v-model="linkForm.url" type="url" placeholder="https://ejemplo.com" required @input="detectLinkIcon" /></label>
@@ -431,6 +485,15 @@ const publish = () => router.post('/dashboard/publish', {}, {
 .brand-icon--button { width: 24px; height: 24px; }
 .preview-banner { display: flex; flex-direction: column; padding: 8px 8px 14px; gap: 12px; overflow: hidden; }
 .preview-banner-image { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; }
+.link-layout-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.link-layout-option { display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 2px solid #ddd8e8; border-radius: 14px; background: white; cursor: pointer; }
+.link-layout-option--selected { border-color: #6e35ff; background: #f3eeff; }
+.link-layout-option input { margin-top: 3px; color: #6e35ff; }
+.link-layout-option strong, .link-layout-option small { display: block; }
+.link-layout-option small { margin-top: 4px; color: #666; font-weight: 500; line-height: 1.35; }
+.link-drag-handle { position: absolute; z-index: 2; top: 8px; right: 8px; display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: rgb(23 23 19 / 75%); color: white; font-size: 20px; line-height: 1; cursor: grab; touch-action: none; user-select: none; }
+.link-drag-handle:active { cursor: grabbing; }
+.link-drag-handle:focus-visible { outline: 3px solid #b9ff66; outline-offset: 2px; }
 .link-button-icon, .link-button-image { position: absolute; left: 20px; width: 24px; height: 24px; }
 .link-button-image { border-radius: 7px; object-fit: cover; }
 .social-editor-button, .social-add-button, .social-real-button { display: grid; width: 42px; height: 42px; place-items: center; border: 1.5px solid rgb(255 255 255 / 70%); border-radius: 999px; background: rgb(15 15 15 / 25%); color: inherit; font-size: 17px; font-weight: 900; line-height: 1; transition: transform .18s ease, background-color .18s ease; }
